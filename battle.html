@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Battle Arena — CPU + Disk Scheduling</title>
+  <style>
+    :root{
+      --panel:#161a36;--panel-2:#1b214a;--text:#e8ebff;--muted:#b5b9d6;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --accent1:#5b7cff;--accent2:#9c7cff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#1b214a 0%,#0f1226 40%,#0b0e1d 100%);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; min-height: 100vh;}
+
+    /* ================= LANDING PAGE STYLE ================= */
+    #landingPage {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)),
+                  url('https://img.freepik.com/premium-photo/pc-gamer-winner_257123-14747.jpg?w=2000') no-repeat center center;
+      background-size: cover;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.8s ease, visibility 0.8s;
+    }
+
+    #landingPage h1 {
+      font-size: 80px;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 10px;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px var(--accent1), 0 0 40px rgba(0,0,0,0.5);
+      font-weight: 900;
+      font-family: 'Arial Black', sans-serif;
+      text-align: center;
+    }
+
+    .get-started-btn {
+      padding: 18px 45px;
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      background: var(--accent2);
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transition: 0.3s;
+      box-shadow: 0 0 20px rgba(255, 61, 0, 0.5);
+    }
+
+    .get-started-btn:hover {
+      transform: scale(1.1);
+      background: #ff5722;
+      box-shadow: 0 0 35px rgba(255, 61, 0, 0.8);
+    }
+
+    /* Fighter Selection Styles */
+    #fighterPage {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #0b0e1d; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 90;
+    }
+    .fighter-grid { display: flex; gap: 20px; margin-top: 30px; }
+    .fighter-card {
+      background: var(--panel); border: 2px solid rgba(255,255,255,0.1); padding: 20px;
+      border-radius: 20px; cursor: pointer; transition: 0.3s; width: 220px; text-align: center;
+    }
+    .fighter-card:hover { border-color: var(--accent1); transform: translateY(-10px); background: var(--panel-2); }
+    .fighter-img { width: 100px; height: 100px; border-radius: 50%; background: #28306b; margin-bottom: 15px; display: inline-block; }
+    .fighter-name { font-size: 18px; font-weight: bold; color: #fff; }
+
+    header{position:sticky;top:0;background:linear-gradient(180deg,rgba(15,18,38,.95),rgba(15,18,38,.6));backdrop-filter:blur(8px);z-index:10;border-bottom:1px solid rgba(255,255,255,.06)}
+    .wrap{max-width:1200px;margin:0 auto;padding:16px}
+    .title{display:flex;align-items:center;gap:12px}
+    .badge{padding:2px 8px;border:1px solid rgba(255,255,255,.18);border-radius:999px;color:var(--muted);font-size:12px}
+    .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:10px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tabbtn{padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;user-select:none}
+    .tabbtn.active{background:linear-gradient(90deg,var(--accent1),var(--accent2));border-color:transparent}
+    .hint{color:var(--muted);font-size:12px}
+    .grid{display:grid;grid-template-columns:320px 1fr;gap:16px;margin-top:16px}
+    .panel{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:var(--shadow)}
+    .panel h3{margin:0 0 8px 0;font-size:16px;color:#fff}
+    .panel .p{padding:16px}
+    label{display:block;margin:8px 0 6px 0;color:var(--muted);font-size:12px}
+    input,select,button,textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:#0f1330;color:var(--text)}
+    textarea{min-height:90px;resize:vertical}
+    button{cursor:pointer;transition:transform .02s ease,opacity .2s ease;border-color:transparent}
+    .btn{background:#28306b}
+    .btn:hover{opacity:.95}
+    .btn:active{transform:translateY(1px)}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.16)}
+    .btn-accent{background:linear-gradient(90deg,var(--accent1),var(--accent2))}
+    .row{display:flex;gap:8px}
+    .row > *{flex:1}
+    .list{display:grid;gap:8px}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:#11163a;font-size:12px}
+    .chip .dot{width:8px;height:8px;border-radius:999px}
+    .stack{display:flex;flex-direction:column;gap:8px}
+    .queues{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .queue{min-height:56px;padding:8px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);background:rgba(255,255,255,.02)}
+    canvas{width:100%;height:240px;background:#0d112c;border-radius:12px;border:1px solid rgba(255,255,255,.08)}
+    .footer{color:var(--muted);font-size:12px;margin-top:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px;vertical-align:top}
+    th{color:var(--muted);font-weight:600;text-align:left}
+    .score{font-size:28px;font-weight:700}
+    .pill{padding:2px 6px;border-radius:8px;background:#10163a;border:1px solid rgba(255,255,255,.12);font-size:12px;color:var(--muted)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    .hide{display:none!important}
+    @media (max-width: 980px){.grid{grid-template-columns:1fr} #landingPage h1 { font-size: 40px; }}
+  </style>
+</head>
+<body>
+
+<div id="landingPage">
+  <h1>Battle Arena</h1>
+  <p>CPU Scheduling + Disk Scheduling Simulator</p>
+  <button class="get-started-btn" onclick="showFighterSelection()">Get Started</button>
+</div>
+
+<div id="fighterPage" class="hide">
+  <h1 style="color: var(--accent1);">Choose Your Fighter</h1>
+  <div class="fighter-grid">
+    <div class="fighter-card" onclick="selectFighter('Sanzida')">
+      <div class="fighter-img"></div>
+      <div class="fighter-name">Sanzida</div>
+      <p style="font-size: 11px; color: var(--muted);">Speed Specialist</p>
+    </div>
+    <div class="fighter-card" onclick="selectFighter('Saima')">
+      <div class="fighter-img"></div>
+      <div class="fighter-name">Saima</div>
+      <p style="font-size: 11px; color: var(--muted);">Logic Strategist</p>
+    </div>
+    <div class="fighter-card" onclick="selectFighter('Rahi')">
+      <div class="fighter-img"></div>
+      <div class="fighter-name">Rahi</div>
+      <p style="font-size: 11px; color: var(--muted);">Execution Master</p>
+    </div>
+  </div>
+  <button class="btn btn-ghost" style="margin-top: 40px; width: auto; padding: 10px 30px;" onclick="backToLanding()">← Back</button>
+</div>
+
+<div id="mainApp" class="hide">
+  <header>
+    <div class="wrap">
+      <div class="title">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3l2.6 5.3 5.9.9-4.25 4.14 1 5.86L12 16.9l-5.25 2.8 1-5.86L3.5 9.2l5.9-.9L12 3z" fill="url(#g)"/>
+          <defs><linearGradient id="g" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#7c9cff"/><stop offset="1" stop-color="#9c7cff"/></linearGradient></defs>
+        </svg>
+        <div>
+          <div style="font-weight:800;font-size:20px">Battle Arena — <span id="currentFighter"></span></div>
+          <div class="badge">CPU Scheduling + Disk Scheduling</div>
+        </div>
+        <button class="btn-ghost" style="width: auto; font-size: 12px; margin-left: auto;" onclick="showFighterSelection()">Change Fighter</button>
+      </div>
+
+      <div class="topbar">
+        <div class="tabs">
+          <div id="tabCPU" class="tabbtn active">CPU Scheduling</div>
+          <div id="tabDISK" class="tabbtn">Disk Scheduling</div>
+        </div>
+        <div class="hint">CPU: Space=Start/Pause, →=Step, Ctrl+R=Reset</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="cpuView">
+      <div class="grid">
+        <div class="panel">
+          <div class="p stack">
+            <h3>CPU Controls</h3>
+            <div class="row">
+              <div>
+                <label for="algo">Algorithm</label>
+                <select id="algo">
+                  <option value="FCFS">FCFS (First-Come, First-Serve)</option>
+                  <option value="SJF">SJF (Non-preemptive)</option>
+                  <option value="LJF">LJF (Longest Job First, Non-preemptive)</option>
+                  <option value="SRJF">SRJF / SRTF (Shortest Remaining Job First, Preemptive)</option>
+                  <option value="LRTF">LRTF (Longest Remaining Time First, Preemptive)</option>
+                  <option value="RR">Round Robin</option>
+                  <option value="PRIO">Priority (Non-preemptive)</option>
+                </select>
+              </div>
+              <div>
+                <label for="quantum">Time Quantum <span class="pill">RR only</span></label>
+                <input id="quantum" type="number" value="2" min="1" />
+              </div>
+            </div>
+            <div class="row">
+              <button id="btnStart" class="btn btn-accent">▶ Start</button>
+              <button id="btnStep" class="btn">⏭ Step</button>
+              <button id="btnReset" class="btn btn-ghost">↺ Reset</button>
+            </div>
+            <div class="panel" style="background:transparent;border:none;box-shadow:none;padding:0">
+              <div class="p">
+                <h3>Process Input</h3>
+                <div class="row">
+                  <div><label>PID</label><input id="pid" placeholder="P1" /></div>
+                  <div><label>Arrival</label><input id="arrival" type="number" min="0" value="0" /></div>
+                  <div><label>Burst</label><input id="burst" type="number" min="1" value="5" /></div>
+                  <div><label>Priority</label><input id="priority" type="number" min="0" value="1" /></div>
+                </div>
+                <div class="row">
+                  <button id="btnAdd" class="btn">＋ Add Process</button>
+                  <button id="btnRandom" class="btn">🎲 Random Set</button>
+                  <button id="btnClear" class="btn btn-ghost">🧹 Clear</button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3>Current Set</h3>
+              <div class="list" id="procList"></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="p stack">
+            <h3>CPU Arena & Gantt</h3>
+            <canvas id="gantt" width="1024" height="240"></canvas>
+
+            <h3>Process Metrics Table</h3>
+            <div style="background:rgba(0,0,0,0.2);border-radius:12px;overflow-x:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>PID</th>
+                    <th>Arrival</th>
+                    <th>Burst</th>
+                    <th>Finish</th>
+                    <th>Turnaround</th>
+                    <th>Waiting</th>
+                  </tr>
+                </thead>
+                <tbody id="cpuTableBody"></tbody>
+              </table>
+            </div>
+
+            <div class="queues">
+              <div><label>Ready Queue</label><div class="queue" id="readyQ"></div></div>
+              <div><label>Running</label><div class="queue" id="runningQ"></div></div>
+              <div><label>Completed</label><div class="queue" id="doneQ"></div></div>
+            </div>
+            <div class="panel" style="background:transparent;border:none;box-shadow:none;padding:0">
+              <div class="p">
+                <h3>CPU Summary Metrics</h3>
+                <table>
+                  <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                  <tbody id="metricsBody"></tbody>
+                </table>
+                <div class="footer">Score = 100 − (Avg Turnaround + Avg Waiting) + Utilization×10</div>
+                <div class="score" id="score">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="diskView" class="hide">
+      <div class="grid">
+        <div class="panel">
+          <div class="p stack">
+            <h3>Disk Controls</h3>
+            <div>
+              <label for="diskAlgo">Algorithm</label>
+              <select id="diskAlgo">
+                <option value="D_FCFS">FCFS</option>
+                <option value="SSTF">SSTF (Shortest Seek Time First)</option>
+                <option value="SCAN">SCAN</option>
+                <option value="CSCAN">C-SCAN</option>
+                <option value="LOOK">LOOK</option>
+                <option value="CLOOK">C-LOOK</option>
+              </select>
+            </div>
+            <div class="row">
+              <div><label>Head Start</label><input id="headStart" type="number" value="50" min="0" /></div>
+              <div><label>Disk Size (tracks)</label><input id="diskSize" type="number" value="200" min="2" /></div>
+            </div>
+            <div>
+              <label>Direction <span class="pill">SCAN/LOOK family</span></label>
+              <select id="direction">
+                <option value="inc">Increasing</option>
+                <option value="dec">Decreasing</option>
+              </select>
+            </div>
+            <div>
+              <label>Request Queue (comma/space separated)</label>
+              <textarea id="requests">98, 183, 37, 122, 14, 124, 65, 67</textarea>
+            </div>
+            <div class="row">
+              <button id="btnDiskRun" class="btn btn-accent">▶ Run</button>
+              <button id="btnDiskRandom" class="btn">🎲 Random</button>
+              <button id="btnDiskClear" class="btn btn-ghost">🧹 Clear</button>
+            </div>
+            <div class="footer">Disk size 200 means tracks 0..199</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="p stack">
+            <canvas id="diskCanvas" width="1024" height="300"></canvas>
+
+            <div class="panel" style="background:transparent;border:none;box-shadow:none;padding:0">
+              <div class="p">
+                <h3>Disk Metrics</h3>
+                <table>
+                  <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                  <tbody id="diskMetricsBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="panel" style="background:transparent;border:none;box-shadow:none;padding:0">
+              <div class="p">
+                <h3>Seek Sequence</h3>
+                <div id="diskSeq" class="mono" style="color:var(--muted);white-space:pre-wrap;word-break:break-word">Click Run to generate…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* Navigation Logic */
+function showFighterSelection() {
+  document.getElementById('landingPage').classList.add('hide');
+  document.getElementById('mainApp').classList.add('hide');
+  document.getElementById('fighterPage').classList.remove('hide');
+}
+
+function backToLanding() {
+  document.getElementById('fighterPage').classList.add('hide');
+  document.getElementById('landingPage').classList.remove('hide');
+  document.getElementById('landingPage').style.opacity = '1';
+}
+
+function selectFighter(name) {
+  document.getElementById('currentFighter').innerText = name;
+  document.getElementById('fighterPage').classList.add('hide');
+  document.getElementById('mainApp').classList.remove('hide');
+  drawCPU();
+  drawDiskPdfBox(null, 199);
+}
+
+/* Original App Logic - NOT CHANGING ANY LINE BELOW EXCEPT INTERNAL CALLS */
+function startApp() {
+  showFighterSelection();
+}
+
+const el = id => document.getElementById(id);
+const rnd = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+function setTab(which){
+  el('tabCPU').classList.toggle('active', which==='cpu');
+  el('tabDISK').classList.toggle('active', which==='disk');
+  el('cpuView').classList.toggle('hide', which!=='cpu');
+  el('diskView').classList.toggle('hide', which!=='disk');
+}
+el('tabCPU').onclick = ()=>setTab('cpu');
+el('tabDISK').onclick = ()=>setTab('disk');
+
+/* CPU Logic */
+const niceColors = ["#7c9cff","#9c7cff","#55d3ff","#ffbb55","#ff6b6b","#1fdc8e","#ffd3e2","#b3ff9c","#9cfff5","#e8ebff"];
+function hashCode(s){let h=0; for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i); h|=0;} return h;}
+function colorFor(pid){ return niceColors[Math.abs(hashCode(pid)) % niceColors.length]; }
+
+let baseProcesses = [];
+let time = 0, running = null, ready = [], done = [], events = [];
+let algo = 'FCFS', quantum = 2, rrSlice = 0;
+
+function resetSim(){
+  time = 0; running = null; ready = []; done = []; events = []; rrSlice = 0;
+  baseProcesses.sort((a,b)=>a.arrival-b.arrival || a.arrivalOrder-b.arrivalOrder);
+  for(const p of baseProcesses){ p.remaining=p.burst; p.firstResponse=null; p.finish=null; p.admitted=false; }
+  updateQueues(); drawCPU(); renderMetrics();
+}
+function admitArrivals(){ for(const p of baseProcesses){ if(!p.admitted && p.arrival<=time){ ready.push(p); p.admitted=true; } } }
+function isPreemptive(){ return algo==='SRJF' || algo==='LRTF'; }
+function bestReadyCandidate(){
+  if(ready.length===0) return null;
+  if(algo==='FCFS'){ ready.sort((a,b)=>a.arrivalOrder-b.arrivalOrder); return ready[0]; }
+  if(algo==='SJF'){ ready.sort((a,b)=>a.burst-b.burst || a.arrivalOrder-b.arrivalOrder); return ready[0]; }
+  if(algo==='LJF'){ ready.sort((a,b)=>b.burst-a.burst || a.arrivalOrder-b.arrivalOrder); return ready[0]; }
+  if(algo==='PRIO'){ ready.sort((a,b)=>a.priority-b.priority || a.arrivalOrder-b.arrivalOrder); return ready[0]; }
+  if(algo==='RR'){ return ready[0]; }
+  if(algo==='SRJF'){ ready.sort((a,b)=>a.remaining-b.remaining || a.arrivalOrder-b.arrivalOrder); return ready[0]; }
+  if(algo==='LRTF'){ ready.sort((a,b)=>b.remaining-a.remaining || a.arrivalOrder-b.arrivalOrder); return ready[0]; }
+  return ready[0];
+}
+function pickNext(){ const c=bestReadyCandidate(); if(!c) return null; return ready.shift(); }
+function startRunning(proc){
+  running = proc; rrSlice=0;
+  if(running.firstResponse===null) running.firstResponse = time - running.arrival;
+  events.push({pid:running.pid,start:time,end:time,color:running.color});
+}
+function shouldPreempt(cand, cur){
+  if(!cand || !cur) return false;
+  if(algo==='SRJF') return cand.remaining < cur.remaining;
+  if(algo==='LRTF') return cand.remaining > cur.remaining;
+  return false;
+}
+function maybePreempt(){
+  if(!isPreemptive() || !running) return;
+  const cand = bestReadyCandidate();
+  if(cand && shouldPreempt(cand,running)){
+    ready.push(running); running=null;
+    const next = pickNext(); if(next) startRunning(next);
+  }
+}
+function jumpToNextArrivalIfIdle(){
+  if(running || ready.length>0) return;
+  const future = baseProcesses.filter(p=>!p.admitted && p.remaining>0).map(p=>p.arrival).filter(t=>t>time);
+  if(!future.length) return;
+  time = Math.min(...future);
+  admitArrivals();
+}
+function stepCPU(){
+  admitArrivals(); maybePreempt();
+  if(!running){ const next = pickNext(); if(next) startRunning(next); }
+  jumpToNextArrivalIfIdle();
+  if(running){
+    running.remaining -= 1; rrSlice += 1;
+    events[events.length-1].end = time+1;
+  }
+  if(running && running.remaining===0){
+    running.finish=time+1; done.push(running); running=null; rrSlice=0;
+  }else if(running && algo==='RR' && rrSlice>=quantum){
+    ready.push(running); running=null; rrSlice=0;
+  }
+  time += 1;
+  updateQueues(); drawCPU(); renderMetrics();
+  if(done.length===baseProcesses.length && baseProcesses.length>0){ running=null; return false; }
+  return true;
+}
+function procChip(p){
+  const e=document.createElement('span');
+  e.className='chip';
+  e.innerHTML = `<span class="dot" style="background:${p.color}"></span><b>${p.pid}</b> · A:${p.arrival} · B:${p.burst} · Pr:${p.priority} · R:${p.remaining}`;
+  return e;
+}
+function updateQueues(){
+  const rQ=el('readyQ'), runQ=el('runningQ'), dQ=el('doneQ');
+  rQ.innerHTML=''; runQ.innerHTML=''; dQ.innerHTML='';
+  ready.forEach(p=>rQ.appendChild(procChip(p)));
+  if(running) runQ.appendChild(procChip(running));
+  done.forEach(p=>dQ.appendChild(procChip(p)));
+  const list=el('procList'); list.innerHTML='';
+  [...baseProcesses].sort((a,b)=>a.arrival-b.arrival || a.pid.localeCompare(b.pid)).forEach(p=>{
+    const row=document.createElement('div');
+    row.className='chip';
+    row.innerHTML = `<span class="dot" style="background:${p.color}"></span><b>${p.pid}</b><span class="pill">A:${p.arrival}</span><span class="pill">B:${p.burst}</span><span class="pill">Pr:${p.priority}</span>`;
+    list.appendChild(row);
+  });
+}
+function drawCPU(){
+  const c=el('gantt'), ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.fillStyle='rgba(255,255,255,.12)';
+  ctx.fillRect(0,c.height-40,c.width,1);
+  const maxT=Math.max(20,time+5);
+  const px=t=>(t/maxT)*(c.width-40)+20;
+  const laneH=26, top=20;
+  events.forEach(ev=>{
+    const y=top+(Math.abs(hashCode(ev.pid))%6)*(laneH+4);
+    const x1=px(ev.start), x2=px(ev.end);
+    ctx.fillStyle=ev.color||'#7c9cff';
+    ctx.fillRect(x1,y,Math.max(1,x2-x1),laneH);
+    ctx.fillStyle='#0b0e1d';
+    ctx.font='bold 12px system-ui';
+    ctx.fillText(ev.pid,x1+6,y+16);
+  });
+  ctx.fillStyle='rgba(255,255,255,.35)';
+  ctx.font='12px system-ui';
+  for(let t=0;t<=maxT;t++){
+    const x=px(t);
+    if(t%5===0){ ctx.fillRect(x,c.height-40,1,8); ctx.fillText(String(t),x-3,c.height-20); }
+    else ctx.fillRect(x,c.height-40,1,4);
+  }
+}
+
+function renderMetrics(){
+  const tbody=el('metricsBody');
+  const tableBody=el('cpuTableBody');
+  const n=baseProcesses.length||1;
+  let totalWait=0,totalTurn=0,totalResp=0;
+
+  tableBody.innerHTML = '';
+
+  for(const p of baseProcesses){
+    const finish=p.finish??time;
+    const tat=p.finish ? finish-p.arrival : 0;
+    const wt=p.finish ? tat-p.burst : 0;
+
+    totalTurn+=tat; totalWait+=Math.max(0,wt);
+
+    const row = `<tr>
+      <td style="color:${p.color};font-weight:bold">${p.pid}</td>
+      <td>${p.arrival}</td>
+      <td>${p.burst}</td>
+      <td>${p.finish ?? '-'}</td>
+      <td>${p.finish ? tat : '-'}</td>
+      <td>${p.finish ? wt : '-'}</td>
+    </tr>`;
+    tableBody.innerHTML += row;
+  }
+
+  const avgW=(totalWait/n).toFixed(2), avgT=(totalTurn/n).toFixed(2);
+  const busy=events.reduce((s,e)=>s+Math.max(0,(e.end-e.start)),0);
+  const util=(busy/Math.max(1,time)*100).toFixed(1);
+  tbody.innerHTML = `<tr><td>Average Waiting Time</td><td>${avgW} units</td></tr><tr><td>Average Turnaround</td><td>${avgT} units</td></tr><tr><td>CPU Utilization</td><td>${util}%</td></tr>`;
+  const score=Math.max(0,Math.round(100-(+avgT+ +avgW)+(+util/10)));
+  el('score').textContent=isFinite(score)?score:'—';
+}
+
+function addProcess(pid,arrival,burst,priority){
+  pid=(pid&&pid.trim())?pid.trim():('P'+(baseProcesses.length+1));
+  baseProcesses.push({pid,arrival:Math.max(0,+arrival),burst:Math.max(1,+burst),priority:Math.max(0,+priority),color:colorFor(pid),arrivalOrder:Date.now()+Math.random()});
+  resetSim();
+}
+function randomSet(cnt=5){
+  baseProcesses=[];
+  for(let i=0;i<cnt;i++) addProcess('P'+(i+1), rnd(0,5), rnd(2,8), rnd(1,5));
+  resetSim();
+}
+el('btnAdd').onclick=()=>{addProcess(el('pid').value,el('arrival').value,el('burst').value,el('priority').value); el('pid').value='';};
+el('btnRandom').onclick=()=>randomSet(5);
+el('btnClear').onclick=()=>{baseProcesses=[]; resetSim();};
+el('algo').onchange=(e)=>{algo=e.target.value; resetSim();};
+el('quantum').onchange=(e)=>{quantum=Math.max(1,+e.target.value); resetSim();};
+
+let cpuTimer=null;
+el('btnStart').onclick=()=>{
+  if(cpuTimer){clearInterval(cpuTimer); cpuTimer=null; el('btnStart').textContent='▶ Start'; return;}
+  el('btnStart').textContent='⏸ Pause';
+  cpuTimer=setInterval(()=>{const cont=stepCPU(); if(!cont){clearInterval(cpuTimer); cpuTimer=null; el('btnStart').textContent='▶ Start';}},350);
+};
+el('btnStep').onclick=()=>stepCPU();
+el('btnReset').onclick=()=>resetSim();
+
+/* DISK Logic */
+let diskHasRun=false;
+function parseRequests(str){ return (str||'').split(/[\s,]+/).map(s=>s.trim()).filter(Boolean).map(Number).filter(Number.isFinite); }
+
+function computeDisk(algoD, requests, headStart, maxTrack, direction){
+  const seq=[headStart]; let total=0;
+  const add=(to)=>{ const from=seq[seq.length-1]; total += Math.abs(to-from); seq.push(to); };
+
+  if(algoD==="D_FCFS"){ requests.forEach(add); return {sequence:seq,totalMovement:total,avgSeek:total/requests.length,note:"FCFS"}; }
+  if(algoD==="SSTF"){
+    const pending=requests.slice(); let head=headStart;
+    while(pending.length){ pending.sort((a,b)=>Math.abs(a-head)-Math.abs(b-head)); const next=pending.shift(); add(next); head=next; }
+    return {sequence:seq,totalMovement:total,avgSeek:total/requests.length,note:"SSTF"};
+  }
+  const up = requests.filter(r=>r>=headStart).sort((a,b)=>a-b);
+  const down = requests.filter(r=>r<headStart).sort((a,b)=>b-a);
+  if(algoD==="SCAN"){ if(direction==="inc"){ up.forEach(add); if(seq[seq.length-1]!==maxTrack) add(maxTrack); down.forEach(add); } else { down.forEach(add); if(seq[seq.length-1]!==0) add(0); up.forEach(add); } return {sequence:seq,totalMovement:total,avgSeek:total/requests.length,note:"SCAN"}; }
+  if(algoD==="CSCAN"){
+    if(direction==="inc"){ up.forEach(add); if(seq[seq.length-1]!==maxTrack) add(maxTrack); total+=maxTrack; seq.push(0); down.slice().reverse().forEach(add); }
+    else { down.forEach(add); if(seq[seq.length-1]!==0) add(0); total+=maxTrack; seq.push(maxTrack); up.slice().reverse().forEach(add); }
+    return {sequence:seq,totalMovement:total,avgSeek:total/requests.length,note:"C-SCAN"};
+  }
+  if(algoD==="LOOK"){ if(direction==="inc"){ up.forEach(add); down.forEach(add); } else { down.forEach(add); up.forEach(add); } return {sequence:seq,totalMovement:total,avgSeek:total/requests.length,note:"LOOK"}; }
+  if(algoD==="CLOOK"){
+    if(direction==="inc"){ up.forEach(add); if(down.length){ total+=Math.abs(seq[seq.length-1]-down[down.length-1]); seq.push(down[down.length-1]); down.slice(0,-1).reverse().forEach(add); } }
+    else { down.forEach(add); if(up.length){ total+=Math.abs(seq[seq.length-1]-up[up.length-1]); seq.push(up[up.length-1]); up.slice(0,-1).reverse().forEach(add); } }
+    return {sequence:seq,totalMovement:total,avgSeek:total/requests.length,note:"C-LOOK"};
+  }
+  return {sequence:seq,totalMovement:total,avgSeek:0,note:"Error"};
+}
+
+function diskRun(){
+  const size=Math.max(2,+el('diskSize').value); const head=clamp(+el('headStart').value,0,size-1);
+  const direction=el('direction').value; const algoD=el('diskAlgo').value;
+  let req=parseRequests(el('requests').value).map(x=>clamp(x,0,size-1));
+  if(!req.length) return; diskHasRun=true;
+  const res=computeDisk(algoD,req,head,size-1,direction);
+  renderDisk(res.sequence,head,size-1,res.totalMovement,res.avgSeek,res.note);
+}
+
+function renderDisk(sequence, headStart, maxTrack, totalMovement, avgSeek, note){
+  el('diskMetricsBody').innerHTML = `
+    <tr><td>Head Start</td><td>${headStart}</td></tr>
+    <tr><td>Tracks Range</td><td>0 .. ${maxTrack}</td></tr>
+    <tr><td>Total Head Movement</td><td>${totalMovement} tracks</td></tr>
+    <tr><td>Average Movement / Request</td><td>${avgSeek.toFixed(2)} tracks</td></tr>
+    <tr><td>Notes</td><td>${note}</td></tr>`;
+  el('diskSeq').textContent = sequence.join(' → ');
+  drawDiskPdfBox(sequence,maxTrack);
+}
+
+function drawDiskPdfBox(seq, maxTrack){
+  const c=el('diskCanvas'), ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  const pad=30; const boxX=pad, boxY=pad, boxW=c.width-pad*2, boxH=c.height-pad*2;
+  ctx.fillStyle="#fff"; ctx.fillRect(boxX,boxY,boxW,boxH);
+  ctx.strokeStyle="#bfbfbf"; ctx.strokeRect(boxX,boxY,boxW,boxH);
+  const axisY=boxY+35; const left=boxX+40, right=boxX+boxW-40;
+  ctx.strokeStyle="#000"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(left,axisY); ctx.lineTo(right,axisY); ctx.stroke();
+  ctx.fillStyle="#f39c12"; ctx.font="12px system-ui";
+  const tickCount=9;
+  for(let i=0; i<=tickCount; i++){
+    const t=Math.round((maxTrack/tickCount)*i);
+    const x=left + (t/maxTrack)*(right-left);
+    ctx.beginPath(); ctx.moveTo(x,axisY); ctx.lineTo(x,axisY+8); ctx.stroke();
+    ctx.fillText(String(t), x-10, axisY-10);
+  }
+  if(!seq || seq.length < 2) return;
+  const startY = axisY + 20, endY = boxY + boxH - 20;
+  const xFor=(t)=> left + (t/maxTrack)*(right-left);
+  const yFor=(i)=> startY + (i/(seq.length-1))*(endY-startY);
+  ctx.strokeStyle="#000"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(xFor(seq[0]), yFor(0));
+  for(let i=1; i<seq.length; i++) ctx.lineTo(xFor(seq[i]), yFor(i));
+  ctx.stroke();
+  for(let i=0; i<seq.length; i++){
+    const x = xFor(seq[i]), y = yFor(i);
+    ctx.fillStyle="#000"; ctx.beginPath(); ctx.arc(x,y,5,0,7); ctx.fill();
+    ctx.fillStyle="#f39c12"; ctx.font="bold 12px system-ui"; ctx.fillText(String(seq[i]), x - 12, y - 10);
+  }
+}
+
+el('btnDiskRun').onclick=diskRun;
+el('btnDiskRandom').onclick=()=>{ const size=200; el('requests').value=Array.from({length:8},()=>rnd(0,size-1)).join(', '); diskRun(); };
+el('btnDiskClear').onclick=()=>{ el('requests').value=''; el('diskMetricsBody').innerHTML=''; drawDiskPdfBox(null,199); };
+
+baseProcesses=[{pid:'P1',arrival:0,burst:5,priority:2,color:colorFor('P1'),arrivalOrder:1}];
+resetSim();
+</script>
+</body>
+</html>
